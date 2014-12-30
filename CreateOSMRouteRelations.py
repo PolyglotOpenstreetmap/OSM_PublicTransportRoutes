@@ -10,9 +10,9 @@ lastgroupsRE = re.compile(r'(;\d+){3,4}$')
 
 removePerronRE=re.compile(r"""(?xiu)
                               (?P<name>[\s*\S]+?)
-                              (?P<perron>\s*perron\s*\d*)?
+                              (?P<perron>\s*-?\s*perron\s*\d*)?
                               $
-					       """) # case insensitive search removing Perron #
+					       """) # case insensitive search to help remove (- )Perron #
 
 db = postgresql.open('pq://Jo:tttttt@localhost:5432/DL')
 allrouteidentifiersQUERY = db.prepare("""   SELECT 
@@ -145,6 +145,8 @@ def main():
                        help="process all routes and pickle a dictionary of it")
     parser.add_argument('--route', '-r', action='store_true',
                        help="add a De Lijn route ref directly")
+    parser.add_argument('--josm', '-j', action='store_true',
+                       help="don't send result to JOSM remote control")
 
     args = parser.parse_args()
     if args.allroutes:
@@ -183,11 +185,11 @@ def main():
     if ',' in pub_ID:
         for osmid in pub_ID.split(','):
             print(osmid)
-            processRoute(osmid,'*')
+            processRoute(osmid,'*',not(args.josm))
     else:
-        processRoute(pub_ID,'3214')
+        processRoute(pub_ID,'3214',not(args.josm))
 
-def processRoute(osmid,fn):
+def processRoute(osmid,fn,josmRC):
     operator = 'De Lijn'
     if osmid[0] in 'tT':
         operator = 'TEC'
@@ -214,10 +216,13 @@ def processRoute(osmid,fn):
     with open(targetFileName, mode='w', encoding='utf-8') as osmroutesfile:
         with open(targetWP_nl_FN, mode='w', encoding='utf-8') as WP_nl_file:
             #print(tripids.string)
+            dlnetworks = ['An', 'OV', 'VB', 'Li', 'WV']
             if operator == 'TEC':
+                network = 'TEC' + line[0]
                 tripslist = tripidsTEC(line)
             else:
                 tripslist = tripids(line)
+                network = 'DL' + dlnetworks[int(line[0])-1]
             # print(tripslist)
             stopnames = {}
             stoprefs = {}
@@ -280,7 +285,9 @@ def processRoute(osmid,fn):
                 WP_nl_file.write("{{SP-tabel1}}\r")                
                 print('\n' + str(i) + "  " + osmid + " " + fromstop + " - " + tostop)
                 counter=0; RTreferrer=''
+                osm_objects = ''
                 for osmstopID in stopssequence.split(','):
+                    osm_objects += 'n' + osmstopID + ','
                     # print(counter)
                     if counter==1:
                         WP_nl_file.write("{{SP3||uKBHFa|" + symbol + "|" + RTreferrer)
@@ -334,6 +341,7 @@ def processRoute(osmid,fn):
                 osmroutesfile.write('''  <tag k="from" v="''' + delijnosmlib.xmlsafe(fromstop) + '''" />\r''')
                 osmroutesfile.write('''  <tag k="to" v="''' + delijnosmlib.xmlsafe(tostop) + '''" />\r''')
                 osmroutesfile.write('''  <tag k="operator" v="''' + operator + '''" />\r''')
+                osmroutesfile.write('''  <tag k="network" v="''' + network + '''" />\r''')
                 servicetypes =  ['regular','express','school','special','special','belbus']
                 servicetypesOSM=['',       'express','school','',       '',       'on_demand']
                 #servicetype=servicetypes[int(type)]
@@ -374,6 +382,7 @@ def processRoute(osmid,fn):
             else:
                 osmroutesfile.write('''  <tag k="ref:De_Lijn" v="''' + line + '''" />\r''')
             osmroutesfile.write('''  <tag k="operator" v="''' + operator + '''" />\r''')
+            osmroutesfile.write('''  <tag k="network" v="''' + network + '''" />\r''')
             try:
                 if servicetypesOSM[int(type)] and not(operator == 'TEC'):
                     osmroutesfile.write('''  <tag k="bus" v="''' + servicetypesOSM[int(type)] + '''" />\r''')
@@ -386,6 +395,35 @@ def processRoute(osmid,fn):
             
             osmroutesfile.write("</osm>\r")
 
+    import urllib.parse
+    import urllib.request
+
+    if josmRC:
+        with open(targetFileName, mode='r', encoding='utf-8') as osmroutesfile:
+            contents=osmroutesfile.read()
+
+        values = { 'data': contents.replace('\n','').replace('\r','')}
+        data = urllib.parse.urlencode(values)
+        # data = data.encode('utf-8') # data should be bytes
+        url = 'http://localhost:8111/load_data?' + data
+
+        req = urllib.request.Request(url, method='GET')
+        response = urllib.request.urlopen(req)
+        the_page = response.read()
+        print(response)
+        
+        print(the_page)
+
+    # values = { 'objects': osm_objects.replace('\n','').replace('\r','')}
+    # data = urllib.parse.urlencode(values)
+    # url = 'http://localhost:8111/load_object?' + data
+
+    # req = urllib.request.Request(url, method='GET')
+    # response = urllib.request.urlopen(req)
+    # the_page = response.read()
+    # print(response)
+    
+    # print(the_page)
 
 if __name__ == "__main__":
     main()
