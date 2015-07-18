@@ -2,6 +2,9 @@
 # -*- coding: utf-8 -*-
 import postgresql, datetime, delijnosmlib, re
 from urllib.parse import urlencode
+import urllib.parse
+import urllib.request
+
 
 feestbusRE=re.compile(r'''(F\d+)''')
 feestbusREsub=re.compile(r'''(?:;)?F\d+(;)?''')
@@ -181,6 +184,20 @@ http://wiki.openstreetmap.org/w/index.php?title=WikiProject_Belgium/De_Lijndata#
                 wikifile.write('<br/>       ("' + str(row['description']) + '", "' + name + '", "' + str(row['zone']) + '"),\n')
                
         wikifile.write('|-\r\n|}\r\n')
+    """with open(targetFileName, mode='r', encoding='utf-8') as wikifile:
+        contents=wikifile.read()
+
+        values = { 'data': contents}
+        data = urllib.parse.urlencode(values)
+        # data = data.encode('utf-8') # data should be bytes
+        url = 'http://wiki.openstreetmap.org/wiki/WikiProject_Belgium/Bus_stops&action=edit' + data
+
+        req = urllib.request.Request(url, method='POST')
+        response = urllib.request.urlopen(req)
+        the_page = response.read()
+        print(response)
+            
+        print(the_page)"""
 		
 if __name__ == "__main__":
     main()

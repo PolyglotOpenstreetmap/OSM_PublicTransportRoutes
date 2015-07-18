@@ -17,7 +17,7 @@ DeLijnStops = db.prepare("""SELECT geomdl,
                                        round(ST_X(geomdl)::numeric, 6) AS lon,
                                        round(ST_Y(geomdl)::numeric, 6) AS lat
                                   FROM stops AS dl
-                                  JOIN stops_osm AS osm ON stopidentifier = COALESCE(refDL, ref)
+                                  LEFT OUTER JOIN stops_osm AS osm ON stopidentifier = COALESCE(refDL, ref)
                                   WHERE description !~* 'dummy|afgeschaft'
                                   GROUP BY geomdl,stopidentifier, description,description_normalised,street,municipality,osm.node_ID,dl.route_ref,bustram,osm.zone,osm.name
                                   ORDER BY geomdl;""")

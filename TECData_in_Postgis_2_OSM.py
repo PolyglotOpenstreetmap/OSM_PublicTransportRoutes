@@ -17,7 +17,13 @@ TECStops = db.prepare("""SELECT    geomtec,
                                    round(ST_X(geomtec)::numeric, 6) AS lon,
                                    round(ST_Y(geomtec)::numeric, 6) AS lat
                               FROM stops_tec AS tec
-                              JOIN stops_osm AS osm ON stopidentifier = COALESCE(refTECL, refTECX, refTECN, refTECH, refTECB, refTECC, ref)
+                              LEFT OUTER JOIN stops_osm AS osm ON   stopidentifier = refTECL OR 
+                                                                    stopidentifier = refTECX OR
+                                                                    stopidentifier = refTECN OR
+                                                                    stopidentifier = refTECH OR
+                                                                    stopidentifier = refTECB OR
+                                                                    stopidentifier = refTECC OR
+                                                                    stopidentifier = ref
                               GROUP BY stopidentifier, description,osm.node_ID,osm.zone,osm.name
                               ORDER BY geomtec;""")
 

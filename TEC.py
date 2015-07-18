@@ -1,5 +1,5 @@
 ﻿import postgresql
-import glob, re, os, zipfile
+import glob, os, zipfile
 #import conversion
 
 # -*- coding: utf-8 -*-
@@ -67,9 +67,22 @@ ALTER TABLE stops_TEC OWNER TO postgres;
 
 """)
 
-for fn in glob.glob('C:/Data/TEC/*.STP'):
-    print(fn)
-    db.execute("""COPY stops_TEC FROM '""" + fn + """' DELIMITERS '|' CSV ENCODING 'LATIN1';""")
+stopsFN = 'C:/Data/TEC/TECstops.txt'
+with open(stopsFN, 'w') as stopsFH:
+    for fn in glob.glob('C:/Data/TEC/*.STP'):
+        print(fn)
+        shortFN = fn.split("\\")[-1]
+        entity = shortFN[3]
+        print(fn, shortFN, entity)
+        with open(fn, 'r') as currentSTPfile:
+            for line in currentSTPfile:
+                entity4thisStop = line[0]
+                #print (entity4thisStop)
+                if entity4thisStop == entity:
+                    stopsFH.write(line)
+                    #print (line)
+                
+db.execute("""COPY stops_TEC FROM '""" + stopsFN + """' DELIMITERS '|' CSV ENCODING 'LATIN1';""")
     
 print("Altering table for stops")
 createDB = db.execute("""
@@ -77,18 +90,9 @@ ALTER TABLE stops_TEC
  ADD COLUMN description_normalised text,
  ADD COLUMN lat DOUBLE PRECISION, 
  ADD COLUMN lon DOUBLE PRECISION,
+ ADD COLUMN osm_zone text,
  ADD COLUMN route_ref text,
  ADD COLUMN bustram text,
- ADD COLUMN OSM_name text,
- ADD COLUMN OSM_city text,
- ADD COLUMN OSM_street text,
- ADD COLUMN OSM_operator text,
- ADD COLUMN OSM_route_ref text,
- ADD COLUMN OSM_source text,
- ADD COLUMN OSM_node_ID text,
- ADD COLUMN OSM_last_modified_by_user text,
- ADD COLUMN OSM_last_modified_timestamp TIMESTAMP,
- ADD COLUMN OSM_zone text,
  ADD COLUMN zoneid integer;
 
 SELECT AddGeometryColumn ('public','stops_tec','geomtec',4326,'POINT',2);
